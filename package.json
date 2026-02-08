@@ -1,0 +1,22 @@
+{
+  "name": "nostreward",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Nostr reward bot - zaps and reposts notes",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "nostr",
+    "bitcoin",
+    "lightning",
+    "zap"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@nostr-dev-kit/ndk": "^2.18.1",
+    "dotenv": "^17.2.4"
+  }
+}
