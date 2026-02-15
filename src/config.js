@@ -20,13 +20,25 @@ export const config = {
 
   // Default zap amount in sats
   zapAmountSats: parseInt(process.env.ZAP_AMOUNT_SATS || "21", 10),
+
+  // Action toggles
+  enableZap: process.env.ENABLE_ZAP === "true",
+  enableRepost: process.env.ENABLE_REPOST === "true",
+  enableWhitelist: process.env.ENABLE_WHITELIST === "true",
+
+  // File paths
+  codesFile: process.env.CODES_FILE || "codes.json",
+  whitelistFile: process.env.WHITELIST_FILE || "whitelist.json",
+
+  // Required hashtag for note filtering (without #)
+  requiredHashtag: process.env.REQUIRED_HASHTAG || "nostreward",
 };
 
 export function validateConfig() {
   if (!config.botPrivateKey) {
     throw new Error("BOT_NSEC is required. Set it in your .env file.");
   }
-  if (!config.nwcUrl) {
-    throw new Error("NWC_URL is required. Set it in your .env file.");
+  if (config.enableZap && !config.nwcUrl) {
+    throw new Error("NWC_URL is required when ENABLE_ZAP=true. Set it in your .env file.");
   }
 }

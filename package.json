@@ -2,10 +2,11 @@
   "name": "nostreward",
   "version": "1.0.0",
   "type": "module",
-  "description": "Nostr reward bot - zaps and reposts notes",
+  "description": "Nostr reward bot - monitors for redeem codes, zaps, reposts, and whitelists",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "manage": "node manage-codes.js"
   },
   "keywords": [
     "nostr",

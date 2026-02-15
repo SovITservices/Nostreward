@@ -11,6 +11,7 @@ import { encrypt as nip04Encrypt, decrypt as nip04Decrypt } from "nostr-tools/ni
 import { config } from "./config.js";
 
 let ndk = null;
+let botPubkey = null;
 let nwcSigner = null;
 let nwcSecretBytes = null;
 let nwcClientPubkey = null;
@@ -32,13 +33,16 @@ export async function initBot() {
   // Allow time for relay connections to establish
   await new Promise((r) => setTimeout(r, 3000));
   const user = await signer.user();
+  botPubkey = user.pubkey;
   console.log(`Bot connected as ${user.npub}`);
   console.log(`Relays: ${config.relays.join(", ")}`);
 
-  // Parse NWC connection string
-  parseNwcUrl(config.nwcUrl);
-  console.log(`NWC wallet connected (pubkey: ${nwcWalletPubkey.slice(0, 8)}...)`);
-  console.log(`Default zap amount: ${config.zapAmountSats} sats`);
+  // Parse NWC connection string (only needed when zapping)
+  if (config.nwcUrl) {
+    parseNwcUrl(config.nwcUrl);
+    console.log(`NWC wallet connected (pubkey: ${nwcWalletPubkey.slice(0, 8)}...)`);
+    console.log(`Default zap amount: ${config.zapAmountSats} sats`);
+  }
 
   return ndk;
 }
@@ -283,4 +287,39 @@ export async function repostNote(eventId) {
   const repostEvent = await event.repost(true);
   console.log(`  Repost published! (id: ${repostEvent.id?.slice(0, 12)}...)`);
   return repostEvent;
+}
+
+/**
+ * Get the bot's hex pubkey (available after initBot).
+ * @returns {string}
+ */
+export function getBotPubkey() {
+  return botPubkey;
+}
+
+/**
+ * Start a real-time subscription to kind 1 events with a hashtag filter.
+ *
+ * @param {string} hashtag - Required hashtag (without #)
+ * @param {function} onNoteReceived - Async callback for each matching event
+ * @returns {object} The subscription object (call .stop() to clean up)
+ */
+export function startMonitoring(hashtag, onNoteReceived) {
+  console.log(`\nSubscribing to kind:1 events with #${hashtag}...`);
+
+  const filter = {
+    kinds: [1],
+    "#t": [hashtag],
+    since: Math.floor(Date.now() / 1000),
+  };
+
+  const sub = ndk.subscribe(filter, { closeOnEose: false });
+
+  sub.on("event", (event) => {
+    onNoteReceived(event).catch((err) => {
+      console.error(`Error processing event ${event.id?.slice(0, 12)}...: ${err.message}`);
+    });
+  });
+
+  return sub;
 }
