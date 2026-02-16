@@ -1,12 +1,6 @@
 # Nostreward
 
-A Nostr reward bot that zaps and reposts notes using Nostr Wallet Connect (NWC). Give it a note ID and it will send a Lightning zap and boost the note to your followers.
-
-**Bot npub:** `npub1h0n8fptj0n8w8tpnc49spshe9jyxk3jmmlre62zesd5ungahl0usfnzr87`
-
-<p align="center">
-  <img src="docs/nostr-qr.png" alt="Nostreward bot Nostr profile QR code" width="200" />
-</p>
+Accepts valid redeem codes and rewards users with automatic zaps, note reposts, and private relay whitelist access. Codes can be distributed through product sales, promotions, or any channel you choose. When a user redeems a valid code, the bot triggers the configured reward — zapping their content, reposting their notes, adding their pubkey to a relay whitelist, or any combination of the three.
 
 ---
 
@@ -14,7 +8,7 @@ A Nostr reward bot that zaps and reposts notes using Nostr Wallet Connect (NWC).
 
 - Node.js 20 or later
 - A Nostr private key (nsec or hex) for the bot account
-- A Lightning wallet that supports Nostr Wallet Connect (NWC)
+- A Lightning wallet that supports Nostr Wallet Connect (NWC) — only needed if zapping is enabled
 
 ## Setup
 
@@ -44,51 +38,48 @@ Edit `.env` with your values:
 ```
 BOT_NSEC=nsec1your_private_key_here
 NWC_URL=nostr+walletconnect://your_wallet_pubkey?relay=wss://relay.example.com&secret=your_secret_hex
+ENABLE_ZAP=true
+ENABLE_REPOST=true
+ENABLE_WHITELIST=true
 ```
 
 See the [Configuration](#configuration) section below for all available options.
 
+### 4. Add redeem codes
+
+```bash
+node manage-codes.js add <code>
+```
+
+Codes are stored as SHA-256 hashes in `codes.json` — the plaintext is never saved to disk. You can add new codes at any time without restarting the bot.
+
 ## Usage
 
-Run the bot with a Nostr note ID. The bot accepts hex event IDs, `note1...` bech32 IDs, and `nevent1...` identifiers.
+Start the daemon:
 
 ```bash
-node src/index.js <note_id>
-```
-
-Or using npm:
-
-```bash
-npm start -- <note_id>
-```
-
-### Examples
-
-Zap and repost using a `note1` identifier:
-
-```bash
-node src/index.js note1abc123def456...
-```
-
-Zap and repost using a hex event ID:
-
-```bash
-node src/index.js 3bf0c63fcb93463407af97a507f9f25bfa2be5d72f3e9a4c5a5e0e7f214fa7e8
-```
-
-Zap and repost using an `nevent1` identifier:
-
-```bash
-node src/index.js nevent1qqsxyz789...
+npm start
 ```
 
 The bot will:
 
-1. Connect to the configured relays
-2. Fetch the target note
-3. Send a Lightning zap (default 21 sats) via NWC
-4. Repost (boost) the note
-5. Exit after events propagate
+1. Connect to the configured Nostr relays
+2. Subscribe to notes containing the required hashtag (default: `#nostreward`)
+3. When a note contains a valid unused redeem code, the bot will:
+   - Zap the note via NWC (if enabled)
+   - Repost the note (if enabled)
+   - Add the author's pubkey to the relay whitelist (if enabled)
+4. Send a DM to the user if a zap fails, and automatically retry after 30 minutes
+
+### Managing codes
+
+```bash
+# Add a new code
+node manage-codes.js add <code>
+
+# List all codes and their status
+node manage-codes.js list
+```
 
 ## Configuration
 
@@ -97,9 +88,15 @@ All configuration is done through environment variables in the `.env` file.
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `BOT_NSEC` | Yes | -- | The bot's Nostr private key in nsec or hex format |
-| `NWC_URL` | Yes | -- | Nostr Wallet Connect URL from your Lightning wallet |
+| `NWC_URL` | If zapping | -- | Nostr Wallet Connect URL from your Lightning wallet |
 | `RELAYS` | No | `wss://relay.primal.net, wss://relay.damus.io` | Comma-separated list of Nostr relay URLs |
 | `ZAP_AMOUNT_SATS` | No | `21` | Default zap amount in satoshis |
+| `ENABLE_ZAP` | No | `false` | Enable Lightning zaps for redeemed codes |
+| `ENABLE_REPOST` | No | `false` | Enable note reposts for redeemed codes |
+| `ENABLE_WHITELIST` | No | `false` | Enable adding pubkeys to a relay whitelist |
+| `REQUIRED_HASHTAG` | No | `nostreward` | Hashtag the bot monitors (without `#`) |
+| `CODES_FILE` | No | `codes.json` | Path to the redeem codes data file |
+| `WHITELIST_FILE` | No | `whitelist.json` | Path to the whitelist data file |
 
 ### NWC URL format
 
@@ -111,7 +108,7 @@ nostr+walletconnect://<wallet_pubkey>?relay=<relay_url>&secret=<secret_hex>
 
 ## NWC Wallet Setup
 
-The bot requires a Nostr Wallet Connect (NWC) connection string from a compatible Lightning wallet. Below are instructions for two popular options.
+A Nostr Wallet Connect (NWC) connection string is required when zapping is enabled. Below are instructions for two popular options.
 
 ### Primal Wallet
 
@@ -141,20 +138,15 @@ Any Lightning wallet that supports NWC (NIP-47) should work. Look for a "Nostr W
 ```
 nostreward/
   src/
-    index.js    - Entry point, CLI argument handling
-    bot.js      - NDK setup, zapping, reposting, NWC payment logic
-    config.js   - Environment variable loading and validation
-  docs/
-    nostr-qr.png - Bot profile QR code
-  .env.example   - Example environment configuration
-  package.json
+    index.js      - Daemon entry point, note handling, zap retry logic
+    bot.js        - NDK setup, zapping, reposting, DMs, NWC payment logic
+    codes.js      - Redeem code hashing, matching, and persistence
+    config.js     - Environment variable loading and validation
+    whitelist.js  - Relay whitelist management
+  manage-codes.js - CLI tool for adding and listing redeem codes
+  .env.example    - Example environment configuration
 ```
-
-## Dependencies
-
-- [@nostr-dev-kit/ndk](https://github.com/nostr-dev-kit/ndk) -- Nostr Development Kit for event handling, signing, and zapping
-- [dotenv](https://github.com/motdotla/dotenv) -- Environment variable loading from `.env` files
 
 ## License
 
-ISC
+GPL-3.0
