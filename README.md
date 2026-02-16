@@ -108,26 +108,28 @@ nostr+walletconnect://<wallet_pubkey>?relay=<relay_url>&secret=<secret_hex>
 
 ## NWC Wallet Setup
 
-A Nostr Wallet Connect (NWC) connection string is required when zapping is enabled. Below are instructions for two popular options.
+A Nostr Wallet Connect (NWC) connection string is required when zapping is enabled.
 
-### Primal Wallet
+### Coinos (Recommended)
 
-1. Open the Primal app and go to your wallet
-2. Tap the menu or settings icon in the wallet view
-3. Select **Nostr Wallet Connect** or **NWC**
-4. Create a new connection and give it a name (e.g., "Nostreward bot")
-5. Optionally set a spending limit for the connection
-6. Copy the connection string -- it starts with `nostr+walletconnect://`
-7. Paste it as the `NWC_URL` value in your `.env` file
+1. Go to [coinos.io](https://coinos.io) and create an account or log in
+2. Navigate to **Settings** then **NWC**
+3. Create a new connection and give it a name (e.g., "Nostreward bot")
+4. Copy the connection string -- it starts with `nostr+walletconnect://`
+5. Paste it as the `NWC_URL` value in your `.env` file
 
-### Alby
+### Alby (Self-Hosted)
 
-1. Log in to your Alby account at [getalby.com](https://getalby.com)
-2. Go to **Settings** then **Connections** (or visit the Alby NWC page directly)
+1. Set up [Alby Hub](https://github.com/getAlby/hub) on your own server
+2. Go to **Settings** then **Connections**
 3. Click **Add a new connection**
 4. Name the connection (e.g., "Nostreward bot") and set a budget if desired
 5. Copy the pairing URL -- it starts with `nostr+walletconnect://`
 6. Paste it as the `NWC_URL` value in your `.env` file
+
+### A Note on Primal Wallet
+
+Primal's NWC implementation has known limitations that can cause issues with automated bots. It only supports NIP-04 encryption and does not send payment confirmation responses (kind 23195 events), which means the bot cannot verify whether a zap succeeded or failed. Payments may still go through, but the lack of confirmation makes it unreliable for automated use. We recommend using Coinos or a self-hosted Alby Hub instead.
 
 ### Other Wallets
 
