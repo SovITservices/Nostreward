@@ -290,6 +290,23 @@ export async function repostNote(eventId) {
 }
 
 /**
+ * Send an encrypted DM (NIP-04, kind 4) to a Nostr user.
+ *
+ * @param {string} recipientPubkey - Hex pubkey of the recipient
+ * @param {string} message - Plaintext message content
+ */
+export async function sendDM(recipientPubkey, message) {
+  const dmEvent = new NDKEvent(ndk);
+  dmEvent.kind = 4;
+  dmEvent.content = message;
+  dmEvent.tags = [["p", recipientPubkey]];
+  await dmEvent.encrypt(undefined, undefined, "nip04");
+  await dmEvent.sign();
+  await dmEvent.publish();
+  console.log(`  DM sent to ${recipientPubkey.slice(0, 12)}...`);
+}
+
+/**
  * Get the bot's hex pubkey (available after initBot).
  * @returns {string}
  */

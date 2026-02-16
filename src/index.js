@@ -1,5 +1,5 @@
 import { validateConfig, config } from "./config.js";
-import { initBot, zapNote, repostNote, startMonitoring, getBotPubkey } from "./bot.js";
+import { initBot, zapNote, repostNote, startMonitoring, getBotPubkey, sendDM } from "./bot.js";
 import { loadCodes, findCodeMatch, markCodeUsed, markZapFailed, clearZapFailed, getZapRetries } from "./codes.js";
 import { addToWhitelist } from "./whitelist.js";
 
@@ -57,6 +57,9 @@ async function handleNote(event) {
   // Skip bot's own events
   if (event.pubkey === getBotPubkey()) return;
 
+  // Reload codes from disk to pick up any newly added codes
+  codesData = loadCodes(config.codesFile);
+
   // Check for code match
   const match = findCodeMatch(event.content, codesData);
   if (!match) return;
@@ -76,6 +79,14 @@ async function handleNote(event) {
       console.error(`  Zap failed: ${err.message}`);
       markZapFailed(config.codesFile, codesData, match.index);
       console.log(`  Zap retry scheduled in 30 minutes`);
+      try {
+        await sendDM(
+          event.pubkey,
+          "Hey! The Nostreward bot tried to zap your note but it failed. You may be missing a Lightning address on your Nostr profile. Check your profile settings and make sure you have a Lightning address (e.g. you@walletofsatoshi.com) set up. We'll try again in 30 minutes."
+        );
+      } catch (dmErr) {
+        console.error(`  DM notification failed: ${dmErr.message}`);
+      }
     }
   }
 
@@ -105,6 +116,7 @@ async function handleNote(event) {
  * Check for and process pending zap retries.
  */
 async function processZapRetries() {
+  codesData = loadCodes(config.codesFile);
   const retries = getZapRetries(codesData);
   if (retries.length === 0) return;
 
@@ -120,6 +132,17 @@ async function processZapRetries() {
       console.error(`  Zap retry failed: ${err.message}`);
       markZapFailed(config.codesFile, codesData, retry.index);
       console.log(`  Next retry in 30 minutes`);
+      try {
+        const recipientPubkey = codesData.codes[retry.index].usedBy;
+        if (recipientPubkey) {
+          await sendDM(
+            recipientPubkey,
+            "Hey! The Nostreward bot tried to zap your note again but it still failed. Please make sure you have a Lightning address (e.g. you@walletofsatoshi.com) set up on your Nostr profile. We'll try again in 30 minutes."
+          );
+        }
+      } catch (dmErr) {
+        console.error(`  DM notification failed: ${dmErr.message}`);
+      }
     }
   }
 }
