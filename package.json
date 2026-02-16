@@ -15,7 +15,7 @@
     "zap"
   ],
   "author": "",
-  "license": "ISC",
+  "license": "GPL-3.0-only",
   "dependencies": {
     "@nostr-dev-kit/ndk": "^2.18.1",
     "dotenv": "^17.2.4"
